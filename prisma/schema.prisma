@@ -1,0 +1,218 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  DOCTOR
+  RECEPTIONIST
+  PATIENT
+}
+
+enum AccountStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum DayOfWeek {
+  SATURDAY
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+}
+
+enum NotificationType {
+  APPOINTMENT
+  PATIENT
+  DOCTOR
+  SYSTEM
+}
+
+model User {
+  id String @id @default(cuid())
+
+  name     String
+  email    String  @unique
+  password String?
+  phone    String?
+  image    String?
+
+  role   Role          @default(PATIENT)
+  status AccountStatus @default(PENDING)
+
+  patient Patient?
+  doctor  Doctor?
+
+  notifications Notification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Clinic {
+  id String @id @default(cuid())
+
+  name        String
+  description String?
+  address     String
+
+  phone String?
+  image String?
+
+  doctors Doctor[]
+
+  createdAt DateTime @default(now())
+}
+
+model Doctor {
+  id String @id @default(cuid())
+
+  specialization String
+
+  experience Int?
+
+  consultationFee Float
+
+  bio String?
+
+  userId String @unique
+
+  clinicId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  clinic Clinic @relation(fields: [clinicId], references: [id])
+
+  schedules DoctorSchedule[]
+
+  slots TimeSlot[]
+
+  appointments Appointment[]
+}
+
+model Patient {
+  id String @id @default(cuid())
+
+  gender Gender
+
+  birthDate DateTime
+
+  address String?
+
+  emergencyContact String?
+
+  userId String @unique
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  appointments Appointment[]
+}
+
+model DoctorSchedule {
+  id String @id @default(cuid())
+
+  doctorId String
+
+  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  day DayOfWeek
+
+  startTime String
+
+  endTime String
+
+  slotDuration Int @default(20)
+
+  isActive Boolean @default(true)
+
+  slots TimeSlot[]
+}
+
+model TimeSlot {
+  id String @id @default(cuid())
+
+  doctorId String
+
+  scheduleId String
+
+  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  schedule DoctorSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  date DateTime
+
+  startTime String
+
+  endTime String
+
+  isBooked Boolean @default(false)
+
+  appointment Appointment?
+}
+
+model Appointment {
+  id String @id @default(cuid())
+
+  patientId String
+
+  doctorId String
+
+  slotId String @unique
+
+  appointmentDate DateTime
+
+  queueNumber Int
+
+  status AppointmentStatus @default(PENDING)
+
+  notes String?
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  doctor Doctor @relation(fields: [doctorId], references: [id])
+
+  slot TimeSlot @relation(fields: [slotId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id String @id @default(cuid())
+
+  title String
+
+  message String
+
+  type NotificationType
+
+  isRead Boolean @default(false)
+
+  userId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
